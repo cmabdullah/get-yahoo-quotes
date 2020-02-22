@@ -1,5 +1,7 @@
 ## YahooFinance Java
 
+##### java program to get information of Yahoo quotes which works with authorized page.
+
 ```java
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -9,6 +11,7 @@ import java.net.URLConnection;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
@@ -16,6 +19,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 public class YahooFinance {
+    static final Charset UTF_8 = Charset.forName("UTF-8");
+
+    static String forceUtf8Coding(String input) {
+        return new String(input.getBytes(UTF_8), UTF_8);
+    }
+
     public static double getPrice(final String ticker) throws Exception {
 
         URLConnection con = new URL("https://finance.yahoo.com/quote/"+ticker).openConnection();
@@ -24,15 +33,22 @@ public class YahooFinance {
 
         BufferedReader rsv = new BufferedReader(new InputStreamReader(con.getInputStream()));
         Pattern crumbPattern = Pattern.compile(".*\"CrumbStore\":\\{\"crumb\":\"([^\"]+)\"\\}.*");
-        String crumb = rsv.lines().filter(n -> crumbPattern.matcher(n).matches()).map(n -> {
+        String crumbRow = rsv.lines().filter(n -> crumbPattern.matcher(n).matches()).map(n -> {
             Matcher matcher = crumbPattern.matcher(n);
             return matcher.matches() ? matcher.group(1) : "";
         }).findAny().orElse(null);
+
         rsv.close();
-        System.out.println("crumb : "+ crumb);
+
+        String crumb = StringUtil.unescapeJavaString(crumbRow);
+        
+        //String crumb = forceUtf8Coding(crumbRow);
+        //force encoding is not working
+        //crumbRow : bZ\u002FiB6.VoDr
+        //crumb : bZ\u002FiB6.VoDr
+
         String quoteUrl = "https://query1.finance.yahoo.com/v7/finance/download/"+ticker+"?period1="+1493425217+"&period2="+1496017217+"&interval=1d&events=history&crumb="
                 + crumb;
-        //System.out.println("filtered Cokie " + cookies.get(1).substring(0, 26));
 
         con.connect();
         HttpClient client = HttpClient.newHttpClient();
@@ -64,14 +80,11 @@ public class YahooFinance {
                     return new HistoricalQuote(date, open,  high, low, close, adjClose, volume);
                 }).collect(Collectors.toList());
 
-        //list.forEach(n -> System.out.println(n.toString()));
-        double close  = list.stream().findFirst().map(n -> n.getClose()).orElseThrow();
-        System.out.println("ticker : "+ ticker+ " close : "+ close);
-        return close;
+        HistoricalQuote historicalQuote = list.stream().findFirst().orElseThrow();
+        System.out.println("ticker : "+ ticker+ " "+ historicalQuote.toString());
+        return historicalQuote.getClose();
     }
 }
 ```
 
-#### reference 
-
-http://blog.bradlucas.com/posts/2017-06-02-new-yahoo-finance-quote-download-url/
+[inspired by bradlucas](http://blog.bradlucas.com/posts/2017-06-02-new-yahoo-finance-quote-download-url/)

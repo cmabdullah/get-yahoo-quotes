@@ -35,11 +35,9 @@ public class YahooFinance {
 
         rsv.close();
 
-
-
-        String crumb = forceUtf8Coding(crumbRow);
-        System.out.println("crumbRow : "+ crumbRow);
-        System.out.println("crumb : "+ crumb);
+        String crumb = StringUtil.unescapeJavaString(crumbRow);
+//        System.out.println("crumbRow : "+ crumbRow);
+//        System.out.println("crumb : "+ crumb);
 
         //force encoding is not working
 //        crumbRow : bZ\u002FiB6.VoDr
@@ -80,8 +78,8 @@ public class YahooFinance {
                 }).collect(Collectors.toList());
 
         //list.forEach(n -> System.out.println(n.toString()));
-        double close  = list.stream().findFirst().map(n -> n.getClose()).orElseThrow();
-        System.out.println("ticker : "+ ticker+ " close : "+ close);
-        return close;
+        HistoricalQuote historicalQuote = list.stream().findFirst().orElseThrow();
+        System.out.println("ticker : "+ ticker+ " "+ historicalQuote.toString());
+        return historicalQuote.getClose();
     }
 }
